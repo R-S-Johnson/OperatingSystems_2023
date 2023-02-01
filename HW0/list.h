@@ -49,6 +49,7 @@ static inline int ll_remove_first(struct linked_list *ll) {
     struct node *tmp = ll->head;
     ll->head = tmp->next;
     free(tmp);
+    ll->size--;
 	return 1;
 }
 

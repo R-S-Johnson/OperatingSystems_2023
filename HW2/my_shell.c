@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -66,7 +67,7 @@ int main(int argc, char* argv[]) {
 			scanf("%[^\n]", line);
 			getchar();
 		}
-		printf("Command entered: %s (remove this debug output later)\n", line);
+		// printf("Command entered: %s (remove this debug output later)\n", line);
 		/* END: TAKING INPUT */
 
         // Check empty input
@@ -80,10 +81,17 @@ int main(int argc, char* argv[]) {
        //do whatever you want with the commands, here we just print them
        
        // TODO fork in an if statement and execvp in child to run command
+	   if (fork() == 0) {
+			// Child
+			execvp(tokens[0], tokens);
+	   }
+	   else {
+			wait(NULL);
+	   }
 
-		for(i=0;tokens[i]!=NULL;i++){
-			printf("found token %s (remove this debug output later)\n", tokens[i]);
-		}
+		// for(i=0;tokens[i]!=NULL;i++){
+		// 	printf("found token %s (remove this debug output later)\n", tokens[i]);
+		// }
        
 		// Freeing the allocated memory	
 		for(i=0;tokens[i]!=NULL;i++){

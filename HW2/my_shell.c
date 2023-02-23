@@ -83,7 +83,19 @@ int main(int argc, char* argv[]) {
        // TODO fork in an if statement and execvp in child to run command
 	   if (fork() == 0) {
 			// Child
-			execvp(tokens[0], tokens);
+
+			// cd command
+			if (strcmp(tokens[0], "cd") == 0) {
+				printf("cd found\n");
+				if (chdir(tokens[1]) != 0) {
+					printf("Shell: Incorrect command\n");
+				}
+			}
+
+			// /usr/bin/ commands
+			else if (execvp(tokens[0], tokens) == -1) {
+				printf("Shell: Incorrect command\n");
+			}
 	   }
 	   else {
 			wait(NULL);

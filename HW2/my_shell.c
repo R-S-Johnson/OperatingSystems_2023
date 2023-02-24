@@ -87,7 +87,6 @@ int main(int argc, char* argv[]) {
 		}
 		// printf("Command entered: %s (remove this debug output later)\n", line);
 		/* END: TAKING INPUT */
-		printf("input taken\n");
 
 
 		// Check for done background processes
@@ -95,7 +94,6 @@ int main(int argc, char* argv[]) {
 		if(waitpid(-1, &tmp, WNOHANG) > 0) {
 			printf("Shell: Background process finished\n");
 		}
-		printf("checked for bckgnd process\n");
 
         // Check empty input
         if (line == "\n") {
@@ -105,7 +103,6 @@ int main(int argc, char* argv[]) {
 			free(tokens);
 			continue;
         }
-		printf("not empty input\n");
 
 		line[strlen(line)] = '\n'; //terminate with new line
 		tokens = tokenize(line);
@@ -114,13 +111,10 @@ int main(int argc, char* argv[]) {
 		while (tokens[tokensSize] != NULL) {
 			tokensSize++;
 		}
-		printf("format done\n");
 
 		// background process
-		// printf("%d\n", strcmp(tokens[tokensSize-2], "&"));
-		printf("# of tokens: %d\n", tokensSize);	
+		// printf("# of tokens: %d\n", tokensSize);	
 		if (tokensSize > 1 && !strcmp(tokens[tokensSize-1], "&")) {
-			printf("bckgnd process selected\n");
 			int pid = fork();
 			if (pid == 0) {
 				// Child
@@ -132,17 +126,36 @@ int main(int argc, char* argv[]) {
 				backGndSize++;
 			}
 		}
-
-       // basic bin command
-	   else if (fork() == 0) {
-			// Child
-			binCom(tokens);
-	   }
-	   else {
-			// Parent
-			wait(NULL);
-	   }
-	   printf("round complete\n");
+		else {
+			int numComm = 0;
+			int *commands = (int *)malloc(64*sizeof(int));
+			int commBeg = 0;
+			int parBit = 0;
+			for (int i = 0; tokens[i] != NULL; i++) {
+				if (!strcmp(tokens[i], "&&") || !strcmp(tokens[i], "&&&")) {
+					if (!strcmp(tokens[i], "&&&")) {
+						parBit = 1;
+					}
+					tokens[i] = NULL;
+					commands[numComm++] = commBeg;
+					commBeg = i + 1;
+				}
+				commands[numComm++] = commBeg;
+			}
+			for (int i = 0; i < numComm; i++) {
+				if (!fork()) {
+					// Child
+					binCom(tokens + commands[i]*sizeof(char*));
+				}
+				else if (!parBit) {
+					// Parent
+					wait(NULL);
+				}
+			}
+			for (int i = 0; i < numComm; i++) {
+				waitpid(-1, &tmp, WNOHANG);
+			}
+		}
 
 		// for(i=0;tokens[i]!=NULL;i++){
 		// 	printf("found token %s (remove this debug output later)\n", tokens[i]);

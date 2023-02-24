@@ -91,18 +91,9 @@ int main(int argc, char* argv[]) {
 
 		// Check for done background processes
 		int tmp;
-		if(waitpid(-1, &tmp, WNOHANG) > 0) {
+		if (waitpid(-1, &tmp, WNOHANG) > 0) {
 			printf("Shell: Background process finished\n");
 		}
-
-        // Check empty input
-        if (line == "\n") {
-			for(i=0;tokens[i]!=NULL;i++){
-				free(tokens[i]);
-			}
-			free(tokens);
-			continue;
-        }
 
 		line[strlen(line)] = '\n'; //terminate with new line
 		tokens = tokenize(line);
@@ -110,6 +101,27 @@ int main(int argc, char* argv[]) {
 		tokensSize = 0;
 		while (tokens[tokensSize] != NULL) {
 			tokensSize++;
+		}
+
+        // Check empty input
+        if (!tokensSize) {
+			for(i=0;tokens[i]!=NULL;i++){
+				free(tokens[i]);
+			}
+			free(tokens);
+			continue;
+        }
+
+		// exit command
+		if (!strcmp(tokens[0], "exit")) {
+			for(i=0;tokens[i]!=NULL;i++){
+				free(tokens[i]);
+			}
+			free(tokens);
+			for (int i = 0; i < backGndSize; i++) {
+				kill(backGnd[i], 0);
+			}
+			break;
 		}
 
 		// background process

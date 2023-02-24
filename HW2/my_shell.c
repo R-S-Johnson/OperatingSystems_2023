@@ -39,11 +39,29 @@ char **tokenize(char *line)
   return tokens;
 }
 
+void binCom(char **command) {
+	// cd command
+	if (strcmp(command[0], "cd") == 0) {
+		if (chdir(command[1]) != 0) {
+			printf("Shell: Incorrect command\n");
+		}
+	}
+
+	// /usr/bin/ commands
+	else if (execvp(command[0], command) == -1) {
+		printf("Shell: Incorrect command\n");
+	}
+}
+
 
 int main(int argc, char* argv[]) {
 	char  line[MAX_INPUT_SIZE];            
 	char  **tokens;              
 	int i;
+	int tokensSize = 0;
+	int backGnd[64];
+	int backGndSize = 0;
+
 
 	FILE* fp;
 	if(argc == 2) {
@@ -69,37 +87,62 @@ int main(int argc, char* argv[]) {
 		}
 		// printf("Command entered: %s (remove this debug output later)\n", line);
 		/* END: TAKING INPUT */
+		printf("input taken\n");
+
+
+		// Check for done background processes
+		int tmp;
+		if(waitpid(-1, &tmp, WNOHANG) > 0) {
+			printf("Shell: Background process finished\n");
+		}
+		printf("checked for bckgnd process\n");
 
         // Check empty input
         if (line == "\n") {
-            continue;
+			for(i=0;tokens[i]!=NULL;i++){
+				free(tokens[i]);
+			}
+			free(tokens);
+			continue;
         }
+		printf("not empty input\n");
 
 		line[strlen(line)] = '\n'; //terminate with new line
 		tokens = tokenize(line);
-   
-       //do whatever you want with the commands, here we just print them
-       
-       // TODO fork in an if statement and execvp in child to run command
-	   if (fork() == 0) {
+
+		tokensSize = 0;
+		while (tokens[tokensSize] != NULL) {
+			tokensSize++;
+		}
+		printf("format done\n");
+
+		// background process
+		// printf("%d\n", strcmp(tokens[tokensSize-2], "&"));
+		printf("# of tokens: %d\n", tokensSize);	
+		if (tokensSize > 1 && !strcmp(tokens[tokensSize-1], "&")) {
+			printf("bckgnd process selected\n");
+			int pid = fork();
+			if (pid == 0) {
+				// Child
+				tokens[tokensSize-1] = NULL;
+				binCom(tokens);
+			}
+			else {
+				backGnd[backGndSize] = pid;
+				backGndSize++;
+			}
+		}
+
+       // basic bin command
+	   else if (fork() == 0) {
 			// Child
-
-			// cd command
-			if (strcmp(tokens[0], "cd") == 0) {
-				printf("cd found\n");
-				if (chdir(tokens[1]) != 0) {
-					printf("Shell: Incorrect command\n");
-				}
-			}
-
-			// /usr/bin/ commands
-			else if (execvp(tokens[0], tokens) == -1) {
-				printf("Shell: Incorrect command\n");
-			}
+			binCom(tokens);
 	   }
 	   else {
+			// Parent
 			wait(NULL);
 	   }
+	   printf("round complete\n");
 
 		// for(i=0;tokens[i]!=NULL;i++){
 		// 	printf("found token %s (remove this debug output later)\n", tokens[i]);

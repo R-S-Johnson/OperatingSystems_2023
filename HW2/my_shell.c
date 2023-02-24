@@ -9,6 +9,10 @@
 #define MAX_TOKEN_SIZE 64
 #define MAX_NUM_TOKENS 64
 
+int forGnd[64];
+int forGndSize = 0;
+
+
 /* Splits the string by space and returns the array of tokens
 *
 */
@@ -53,6 +57,14 @@ void binCom(char **command) {
 	}
 }
 
+void sigintHandler(int sig_num) {
+	signal(SIGINT, sigintHandler);
+	for (int i = 0; i < forGndSize; i++) {
+		kill(forGnd[i], 0);
+	}
+	forGndSize = 0;
+}
+
 
 int main(int argc, char* argv[]) {
 	char  line[MAX_INPUT_SIZE];            
@@ -62,6 +74,7 @@ int main(int argc, char* argv[]) {
 	int backGnd[64];
 	int backGndSize = 0;
 
+	signal(SIGINT, sigintHandler);
 
 	FILE* fp;
 	if(argc == 2) {
@@ -91,8 +104,16 @@ int main(int argc, char* argv[]) {
 
 		// Check for done background processes
 		int tmp;
-		if (waitpid(-1, &tmp, WNOHANG) > 0) {
+		int pid;
+		if ((pid = waitpid(-1, &tmp, WNOHANG)) > 0) {
 			printf("Shell: Background process finished\n");
+			for (int i = 0; i < --backGndSize; i++) {
+				if (backGnd[i] == pid) {
+					for (int j = i; j < backGndSize; j++) {
+						backGnd[i] = backGnd[i+1];
+					}
+				}
+			}
 		}
 
 		line[strlen(line)] = '\n'; //terminate with new line
@@ -155,13 +176,22 @@ int main(int argc, char* argv[]) {
 				commands[numComm++] = commBeg;
 			}
 			for (int i = 0; i < numComm; i++) {
-				if (!fork()) {
+				int pid = fork();
+				if (!pid) {
 					// Child
+					forGnd[forGndSize++] = pid;
 					binCom(tokens + commands[i]*sizeof(char*));
 				}
 				else if (!parBit) {
 					// Parent
 					wait(NULL);
+					for (int i = 0; i < --forGndSize; i++) {
+						if (forGnd[i] == pid) {
+							for (int j = i; j < forGndSize; j++) {
+								forGnd[i] = forGnd[i+1];
+							}
+						}
+					}
 				}
 			}
 			for (int i = 0; i < numComm; i++) {
